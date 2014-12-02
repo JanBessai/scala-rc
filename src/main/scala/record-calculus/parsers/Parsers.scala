@@ -25,6 +25,20 @@ trait LambdaCalculusParsers extends JavaTokenParsers {
     rep1(singleTerm) ^^ { case terms => terms.reduceLeft(App) }
 }
 
+object LambdaCalculusParsers {
+  trait Memo extends LambdaCalculusParsers with PackratParsers {
+    self: parsers.LambdaCalculusParsers =>
+    import calculus._
+
+    override lazy val variable: PackratParser[Var] = super.variable
+    override lazy val lambda: PackratParser[Lambda] = super.lambda
+    override lazy val singleTerm: PackratParser[Term] = super.singleTerm
+    override lazy val safeWithoutParens: PackratParser[Term] = super.safeWithoutParens
+    override lazy val term: PackratParser[Term] = super.term
+  }
+}
+
+
 trait RecordParsers extends LambdaCalculusParsers {
   self: LambdaCalculusParsers =>
 
@@ -35,7 +49,7 @@ trait RecordParsers extends LambdaCalculusParsers {
     ident ~! ("=" ~>! term) ^^ { case l ~ m => (l, m) }
 
   def record: Parser[Record] =
-    "{" ~>! repsep(member, ",") <~ "}" ^^ (labels => Record(Map() ++ labels))
+    "{" ~>! repsep(member, ",") <~! "}" ^^ (labels => Record(Map() ++ labels))
 
   override def safeWithoutParens: Parser[Term] =
     record | super.safeWithoutParens
@@ -47,6 +61,19 @@ trait RecordParsers extends LambdaCalculusParsers {
     get | record | super.singleTerm
 }
 
+object RecordParsers {
+  trait Memo extends RecordParsers with PackratParsers {
+    self: LambdaCalculusParsers with RecordParsers with LambdaCalculusParsers.Memo =>
+    import calculus._
+
+    override lazy val member: PackratParser[(String, Term)] = super.member
+    override lazy val record: PackratParser[Record] = super.record
+    override lazy val get: PackratParser[Get] = super.get
+  }
+
+}
+
+
 trait MergeParsers extends RecordParsers {
   self: LambdaCalculusParsers with RecordParsers =>
 
@@ -57,6 +84,14 @@ trait MergeParsers extends RecordParsers {
     ("(" ~> term <~ ")" | safeWithoutParens) ~ ("<+>" ~>! record) ^^ { case m ~ r => Merge(m, r) }
 
   override def singleTerm: Parser[Term] = merge | super.singleTerm
+}
+
+object MergeParsers {
+  trait Memo extends MergeParsers with PackratParsers {
+    self: LambdaCalculusParsers with RecordParsers with LambdaCalculusParsers.Memo with RecordParsers.Memo =>
+    import calculus._
+    override lazy val merge: PackratParser[Merge] = super.merge
+  }
 }
 
 trait PrimitiveArithmeticParsers extends LambdaCalculusParsers {
@@ -78,6 +113,15 @@ trait PrimitiveArithmeticParsers extends LambdaCalculusParsers {
   override def term: Parser[Term] = plus ||| super.term
 }
 
+object PrimitiveArithmeticParsers {
+  trait Memo extends PrimitiveArithmeticParsers with PackratParsers {
+    self: LambdaCalculusParsers with PrimitiveArithmeticParsers with LambdaCalculusParsers.Memo =>
+    import calculus._
+    override lazy val number: PackratParser[Number] = super.number
+    override lazy val plus: PackratParser[Term] = super.plus
+  }
+}
+
 trait ProductParsers extends LambdaCalculusParsers {
   self: LambdaCalculusParsers =>
 
@@ -90,7 +134,7 @@ trait ProductParsers extends LambdaCalculusParsers {
   def pi2: Parser[Pi2] =
     "pi2" ~> singleTerm ^^ Pi2
 
-  def product: Parser[Term] =
+  def product: Parser[Product] =
     "(" ~> term ~ ("," ~>! term <~ ")") ^^ { case l ~ r => Product(l, r) }
 
   override def safeWithoutParens: Parser[Term] =
@@ -98,6 +142,16 @@ trait ProductParsers extends LambdaCalculusParsers {
 
   override def singleTerm: Parser[Term] =
     product | pi1 | pi2 | super.singleTerm
+}
+
+object ProductParsers {
+  trait Memo extends ProductParsers with PackratParsers {
+    self: LambdaCalculusParsers with ProductParsers with LambdaCalculusParsers.Memo =>
+    import calculus._
+    override lazy val pi1: PackratParser[Pi1] = super.pi1
+    override lazy val pi2: PackratParser[Pi2] = super.pi2
+    override lazy val product: PackratParser[Product] = super.product
+  }
 }
 
 trait LetBindingParsers extends LambdaCalculusParsers {
@@ -118,6 +172,15 @@ trait LetBindingParsers extends LambdaCalculusParsers {
   override def singleTerm: Parser[Term] = let | super.singleTerm
 }
 
+object LetBindingParsers {
+  trait Memo extends LetBindingParsers with PackratParsers {
+    self: LambdaCalculusParsers with LetBindingParsers with LambdaCalculusParsers.Memo =>
+    import calculus._
+    override lazy val pattern: PackratParser[Pattern] = super.pattern
+    override lazy val let: PackratParser[Let] = super.let
+  }
+}
+
 trait ProductPatternBindingParsers extends LetBindingParsers {
   self: LambdaCalculusParsers with LetBindingParsers =>
 
@@ -128,6 +191,14 @@ trait ProductPatternBindingParsers extends LetBindingParsers {
     "(" ~> pattern ~ ("," ~>! pattern <~ ")") ^^ {case lp ~ rp => ProductPattern(lp, rp) }
 
   override def pattern: Parser[Pattern] = productPattern | super.pattern
+}
+
+object ProductPatternBindingParsers {
+  trait Memo extends ProductPatternBindingParsers with PackratParsers {
+    self: LambdaCalculusParsers with LetBindingParsers with ProductPatternBindingParsers with LambdaCalculusParsers.Memo =>
+    import calculus._
+    override lazy val productPattern: PackratParser[ProductPattern] = super.productPattern
+  }
 }
 
 trait CommentParsers extends LambdaCalculusParsers {
@@ -146,7 +217,13 @@ trait FullCalculusParsers
   with PrimitiveArithmeticParsers
   with LetBindingParsers
   with ProductPatternBindingParsers
-  with CommentParsers {
+  with CommentParsers
+  with LambdaCalculusParsers.Memo
+  with RecordParsers.Memo
+  with MergeParsers.Memo
+  with PrimitiveArithmeticParsers.Memo
+  with LetBindingParsers.Memo
+  with ProductPatternBindingParsers.Memo {
 
   type CalculusType = FullCalculus
 }
