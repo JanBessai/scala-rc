@@ -1,0 +1,33 @@
+let Y = \f . (\x . f (x x)) (\x . f (x x)) in
+let Point =
+  Y(\myClass . \x .
+      let self = myClass x in
+      { get = (x, x),
+        set = \x . (x, unit),
+        shift = self.set(pi1(self.get) + 1),
+        new = myClass
+      }) in
+let Movable =
+  \ super. Y(\myClass. \x.
+               let c = super x in
+               let self = myClass x in
+               c <+> { 
+                 shift = \ dx . self.set(pi1(self.get) + dx),
+                 new = myClass 
+               }) in
+let SetAdapter =
+  \ super . Y(\myClass. \x.
+                let c = super x in
+                let self = myClass x in
+                c <+> {
+                  set = \p . c.set(pi1(p.get)),
+                  new = myClass
+                }) in
+let p = (SetAdapter(Movable(Point)))(1) in
+let p2 = Point(2) in
+let (xn, unit) = p.set(p2) in
+let p3 = p.new(xn) in
+let (xn2, z) = p3.shift(2) in
+let p4 = p3.new(xn2) in
+pi2(p4.get)
+

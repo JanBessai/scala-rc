@@ -1,0 +1,28 @@
+let Y = \f . (\x . f (x x)) (\x . f (x x)) in
+let new = Y in
+let Point =
+  Y(\self. {
+      get = \ this. this.x,
+      set = \ this. \x. this.set(x),
+      shift = \ this . this.shift,
+      shiftTwice = \this. self.shift(self.shift(this)),
+      Point = \x . \this. { 
+        x = x,
+        set = \x. new (self.Point(x)),
+        shift = self.set this ((self.get this) + 1) }
+      }) in
+let Point2 =
+  Y(\self. 
+      Point <+> {
+        getDx = \this . this.dx,
+        Point2 = \dx . \x. \this. (self.Point x this) <+> {
+            dx = dx,
+            set = \x. new (self.Point2 dx x),
+            shift = self.set this ((self.get this) + (self.getDx this))
+          }
+        }) in
+let p = new (Point2.Point2 2 1 ) in
+let p2 = Point.shiftTwice(p) in
+Point.get(p2)
+
+
