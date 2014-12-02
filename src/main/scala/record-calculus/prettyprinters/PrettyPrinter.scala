@@ -72,13 +72,19 @@ trait MergePrettyPrinter extends LambdaCalculusPrettyPrinter {
 
   override implicit def term2Doc(term: Term): Doc =
     term match {
-      case Merge(l, r) => group(term2Doc(l) <+> "<+>" <@> nest(term2Doc(r), 2))
+      case Merge(l, r) => group(parens(term2Doc(l)) <+> "<+>" </> nest(term2Doc(r), 2))
       case _ => super.term2Doc(term)
     }
 }
 
 trait PrimitiveArithmeticPrettyPrinter extends LambdaCalculusPrettyPrinter {
   self: LambdaCalculus with PrimitiveArithmetic with LambdaCalculusPrettyPrinter =>
+
+  override def prettyAppRight(term: Term): Doc =
+    term match {
+      case Plus(_, _) => parens(term2Doc(term))
+      case _ => super.prettyAppRight(term)
+    }
 
   def prettyPlusOperand(term: Term): Doc =
     term match {
