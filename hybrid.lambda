@@ -1,28 +1,30 @@
 let Y = \f . (\x . f (x x)) (\x . f (x x)) in
 let new = Y in
 let Point =
-  Y(\self. {
+  Y(\myClass. {
       get = \ this. this.x,
       set = \ this. \x. this.set(x),
       shift = \ this . this.shift,
-      shiftTwice = \this. self.shift(self.shift(this)),
+      shiftTwice = \this. myClass.shift(myClass.shift(this)),
+      getTimes2 = \this. this.getTimes2,
       Point = \x . \this. { 
         x = x,
-        set = \x. new (self.Point(x)),
-        shift = self.set this ((self.get this) + 1) }
+        set = \x. new (myClass.Point(x)),
+        shift = myClass.set this ((myClass.get this) + 1),
+        getTimes2 = (myClass.get this) +  (myClass.get this) }
       }) in
 let Point2 =
-  Y(\self. 
+  Y(\myClass. 
       Point <+> {
         getDx = \this . this.dx,
-        Point2 = \dx . \x. \this. (self.Point x this) <+> {
+        Point2 = \dx . \x. \this. (myClass.Point x this) <+> {
             dx = dx,
-            set = \x. new (self.Point2 dx x),
-            shift = self.set this ((self.get this) + (self.getDx this))
+            set = \x. new (myClass.Point2 dx x),
+            shift = myClass.set this ((myClass.get this) + (myClass.getDx this))
           }
         }) in
 let p = new (Point2.Point2 2 1 ) in
 let p2 = Point.shiftTwice(p) in
-Point.get(p2)
+Point.getTimes2(p2)
 
 
