@@ -1,0 +1,32 @@
+let Y = \f . (\x . f (x x)) (\x . f (x x)) in
+let new = Y in
+let Point =
+  Y(\myClass. {
+      get = \ this. this.x,
+      set = \ this. \x. this.updatePoint(this <+> { x = x }),
+      shift = \ this . this.shift,
+      shiftTwice = \this. myClass.shift(myClass.shift(this)),
+      getTimes2 = \this. this.getTimes2,
+      Point = \x . \this. { 
+        x = x,
+        updatePoint = \point. new (myClass.Point(point.x)),
+        shift = myClass.set this ((myClass.get this) + 1),
+        getTimes2 = (myClass.get this) +  (myClass.get this) }
+      }) in
+let Point2 =
+  Y(\myClass. 
+      Point <+> {
+        getDx = \this . this.dx,
+        Point2 = \dx . \x. \this. let super = myClass.Point x this in
+           super <+> {
+            dx = dx,
+            updatePoint = \point. new (myClass.Point2 dx (super.updatePoint point).x),
+            updatePoint2 = \point. new (myClass.Point2 (point.dx) (point.x)),
+            shift = myClass.set this ((myClass.get this) + (myClass.getDx this))
+          }
+        }) in
+let p = new (Point2.Point2 2 1 ) in
+let p2 = Point.shiftTwice(p) in
+Point.getTimes2(p2)
+
+
